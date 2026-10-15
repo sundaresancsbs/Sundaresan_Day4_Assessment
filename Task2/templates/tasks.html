@@ -1,0 +1,107 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Tasks</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>My Tasks</h2>
+
+        <a class="logout" href="{{ url_for('logout') }}">Logout</a>
+
+        <form id="taskForm">
+            <label for="title">New Task</label>
+            <input type="text" id="title"
+                   placeholder="Enter task title" required>
+
+            <button type="submit" id="addButton">Add Task</button>
+        </form>
+
+        <p id="message" aria-live="polite"></p>
+
+        <h3>Task List</h3>
+
+        <ul id="taskList">
+            {% for task in tasks %}
+                <li>
+                    <span>{{ task['title'] }}</span>
+                    <span class="status">{{ task['status'] }}</span>
+                </li>
+            {% else %}
+                <li id="emptyMessage">No tasks yet. Add your first task!</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <script>
+        const taskForm = document.getElementById("taskForm");
+        const titleInput = document.getElementById("title");
+        const taskList = document.getElementById("taskList");
+        const message = document.getElementById("message");
+        const addButton = document.getElementById("addButton");
+
+        taskForm.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const title = titleInput.value.trim();
+
+            if (!title) {
+                message.textContent = "Please enter a task title.";
+                return;
+            }
+
+            addButton.disabled = true;
+            message.textContent = "Adding task...";
+
+            try {
+                const response = await fetch("/add_task", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ title: title })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    message.textContent = data.message || "Failed to add task.";
+                    return;
+                }
+
+                const emptyMessage =
+                    document.getElementById("emptyMessage");
+
+                if (emptyMessage) {
+                    emptyMessage.remove();
+                }
+
+                const li = document.createElement("li");
+                const taskTitle = document.createElement("span");
+                const status = document.createElement("span");
+
+                taskTitle.textContent = data.task.title;
+                status.textContent = data.task.status;
+                status.className = "status";
+
+                li.appendChild(taskTitle);
+                li.appendChild(status);
+
+                taskList.prepend(li);
+
+                titleInput.value = "";
+                message.textContent = "Task added successfully!";
+            } catch (error) {
+                message.textContent = "Unable to connect to the server.";
+            } finally {
+                addButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
